@@ -24,6 +24,9 @@ class Simplex:
 
     def insert(self,line, values):
         matrix = self.get_algorithm()
+        if(line == 0):
+            values = np.negative(values)
+            values[-1] = - values[-1]
         matrix[line][1:self.num_var + 1] = values[:-1]
         matrix[line][-1] = values[-1]
     

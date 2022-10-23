@@ -4,7 +4,7 @@ from simplex import Simplex
 num_var = 2
 num_rest = 2
 x = Simplex(num_rest, num_var)
-x.insert(0, [-5,-2,0])
+x.insert(0, [5,2,5])
 x.insert(1, [2,1,6])
 x.insert(2, [10,12,60])
 execute(x)
