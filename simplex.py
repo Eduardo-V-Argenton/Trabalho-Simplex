@@ -25,7 +25,7 @@ class Simplex:
         matrix[line][-1] = values[-1]
 
 
-    def auto_insert_extras(self):
+    def insert_extras(self):
         matrix = self.get_algorithm()
         for i in range(1, self.num_lines):
             matrix[i][self.num_var + i] = 1
@@ -77,11 +77,10 @@ class Simplex:
     
     
     def execute(self):
-        self.auto_insert_extras()
+        self.insert_extras()
         while True:
             matrix = self.get_algorithm()
             pivot = self.select_pivot()
-            print(pivot)
             if(pivot == 0):
                 break
             self.generate_matrix()
@@ -97,9 +96,11 @@ class Simplex:
 class SpecialSimplex(Simplex):
 
     def __init__(self, num_rest, num_var, num_xf, num_a, fo_min = False):
-        super.__init__(num_rest, num_var, fo_min)
+        super().__init__(num_rest, num_var, fo_min)
         self.num_xf = num_xf
         self.num_a = num_a
+        self.has_a = []
+        self.has_xf = []
 
 
     def insert_num_coloumns(self):
@@ -109,6 +110,38 @@ class SpecialSimplex(Simplex):
     def insert_num_lines(self):
         self.num_lines = self.num_rest + 2
     
+    # 0 -> No esp
+    # 1 -> Only xf
+    # 2 -> only a
+    # 3 -> Both
+    def insert(self,line, values, esp_res = 0):
+        matrix = self.get_algorithm()
+        matrix[line][1:self.num_var + 1] = values[:-1]
+        matrix[line][-1] = values[-1]
+        if(esp_res == 1):
+            self.has_xf.append(line)
+        elif(esp_res == 2):
+            self.has_a.append(line)
+        elif(esp_res == 3):
+            self.has_a.append(line)
+            self.has_xf.append(line)
+        else:
+            return -1
+
+
+    def insert_extras(self):
+        matrix = self.get_algorithm()
+        for i, line in enumerate(self.has_xf):
+            matrix[line][self.num_var + i + 1] = 1
+        for i, line in enumerate(self.has_a):
+            matrix[line][self.num_var + self.num_xf + i + 1] = 1
+        if(self.fo_min):
+            matrix[0][0] = -1
+        
+        else:
+            matrix[0] = np.negative(matrix[0])
+            matrix[0][0] = 1
+
 
 class Factory:
     
