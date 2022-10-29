@@ -1,12 +1,13 @@
 from simplex import *
 
 fact = Factory()
-simplex = fact.create_simplex(3,3, True, 2,3)
-simplex.insert(0, [1,-2,-3,0], 0)
-simplex.insert(1, [3,4,9,81], 3)
-simplex.insert(2, [5,6,7,27], 2)
-simplex.insert(3, [1,2,3,47], 1)
+simplex = fact.create_simplex(2,2, True, 2,2)
+simplex.insert(0, [3,2,0])
+simplex.insert(1, [2,1,10], 3)
+simplex.insert(2, [1,5,15], 3)
 simplex.insert_extras()
+simplex.insert_aux_line()
+simplex.execute()
 for i in simplex.algorithms:
     print(i)
     print('=====================')
