@@ -225,11 +225,27 @@ class SpecialSimplex(Simplex):
         return pivot_line
 
 
+    def execute_2_part(self):
+        matrix = self.get_algorithm()
+        simplex2 = Simplex(self.num_rest, self.num_var, self.fo_min)
+        simplex2.insert_num_coloumns()
+        simplex2.insert_num_lines()
+        simplex2.generate_matrix()
+        for i in range(0, simplex2.num_lines):
+            line = matrix[i][:self.num_var + self.num_xf + 1]
+            line = np.append(line,matrix[i][-1])
+            simplex2.insert_line(i, line)
+        print(i)
+        simplex2.execute_algorithms()
+        for algorithm in simplex2.algorithms:
+            self.algorithms.append(algorithm)
+
+
     def execute(self):
         self.insert_extras()
         self.insert_aux_line()
         self.execute_algorithms() 
-
+        self.execute_2_part()
 
 
 class Factory:
