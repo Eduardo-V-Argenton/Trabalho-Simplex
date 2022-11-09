@@ -50,19 +50,23 @@ class Simplex:
         matrix[0][-1] = line[-1]
 
     def define_initial_algorithm(self, matrix_problem) -> None:
-        print(f'xf = {self.xf}')
-        print(f'n_xf = {self.n_xf}')
-        print(f'a = {self.a}')
         matrix = self.get_algorithm()
         self.define_fo_line(matrix_problem[0, :], matrix)
 
         for i, line in enumerate(matrix[1:], 1):
             line[:self.num_var] = matrix_problem[i][:-1]
             line[-1] = matrix_problem[i][-1]
-            if i in self.xf:
-                line[self.num_var + i - 1] = 1
-            if i in self.n_xf:
-                line[self.num_var + i - 1] = -1
-            if i in self.a:
-                line[self.num_var + len(self.xf) + len(self.n_xf) + i - 1] = 1
             matrix[i] = line
+
+        control_column = [0, 0]
+        for i, line in enumerate(matrix[1:, self.num_var:-1], 1):
+            if i in self.xf:
+                line[control_column[0]] = 1
+                control_column[0] += 1
+            elif i in self.n_xf:
+                line[control_column[0]] = -1
+                control_column[0] += 1
+            if i in self.a:
+                line[len(self.n_xf) + len(self.xf) + control_column[1]] = 1
+                control_column[1] += 1
+            matrix[i, self.num_var:-1] = line
