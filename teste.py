@@ -1,22 +1,22 @@
-from simplex import *
+import numpy as np
 
-fact = Factory()
-simplex = fact.create_simplex(2,2, True, 2,2)
-simplex.insert(0, [3,2,0])
-simplex.insert(1, [2,1,10], 3)
-simplex.insert(2, [1,5,15], 3)
-simplex.insert_extras()
-simplex.insert_aux_line()
-simplex.execute()
-for i in simplex.algorithms:
-    print(i)
-    print('=====================')
+from simplex2 import *
 
-# execute(x)
-#print(x.get_algorithm())
-# x.alter_line(0, np.subtract(x.matrix[0], x.matrix[1]))
-#x.alter_line(1, x.matrix[1] / 2)
-#print()
-#y = select_pivot(x)
-#print(y)
+# fact = Factory()
+# simplex = fact.create_simplex(3, 4, False,2,2)
+# simplex.insert(0, [1, 2, 3, 4, 0])
+# simplex.insert(1, [5, 9, 2, 3, 21], 0)
+# simplex.insert(2, [3, 0, 2, 0, 75], 2)
+# simplex.insert(3, [5, 3, 0, 0, 145], 3)
+# simplex.execute()
+# for i in simplex.algorithms:
+#     print(i)
+#     print('=====================')
 
+matrix = np.zeros([4, 4], dtype=float)
+matrix[0] = [0, 3, 4, 0]
+matrix[1] = [1, 1, 5, 13]
+matrix[2] = [3, 4, 2, 9]
+matrix[3] = [2, 6, 7, 18]
+simplex = Simplex(matrix)
+print(simplex.algorithms[0])
