@@ -12,7 +12,7 @@ class Simplex:
         self.n_xf = []
         self.a = []
         self.read_config_column(matrix_problem[:, 0])
-        self.num_lines = self.num_rest + 1 + (0 if not self.fo_min else 1)
+        self.num_lines = self.num_rest + 1
         self.num_columns = self.num_rest + len(self.xf) + len(self.n_xf) + len(self.a)
         self.algorithms = []
         self.generate_matrix()
@@ -45,9 +45,11 @@ class Simplex:
 
     def define_fo_line(self, line, matrix):
         matrix[0][:self.num_var] = line[:-1]
-        if not self.fo_min:
-            matrix[0] = np.negative(matrix[0])
+        matrix[0] = np.negative(matrix[0])
         matrix[0][-1] = line[-1]
+        for i in range(0, len(self.a)):
+            matrix[0][self.num_var + len(self.xf) + len(self.n_xf) + i] = min(
+                x for x in matrix[0][:self.num_var]) * 100000 * (-1 if self.fo_min else 1)
 
     def define_initial_algorithm(self, matrix_problem) -> None:
         matrix = self.get_algorithm()
@@ -70,3 +72,22 @@ class Simplex:
                 line[len(self.n_xf) + len(self.xf) + control_column[1]] = 1
                 control_column[1] += 1
             matrix[i, self.num_var:-1] = line
+
+    def execute(self) -> None:
+        matrix = self.get_algorithm()
+        min_var_fo = min(matrix[0][:self.num_var])
+        while min_var_fo < 0:
+            pivot_line = self.define_pivot(np.where(matrix[0] == min_var_fo), matrix)
+            min_var_fo = min(matrix[0][:self.num_var])
+            min_var_fo = 10
+
+    def define_pivot(self, column_index, matrix) -> int:
+        pivot_div_val = 0
+        pivot_line = 0
+        for i in range(1, self.num_lines):
+            if matrix[i][column_index] != 0:
+                res = matrix[i][-1] / matrix[i][column_index]
+                if res < pivot_div_val or pivot_div_val == 0:
+                    pivot_div_val = res
+                    pivot_line = i
+        return pivot_line

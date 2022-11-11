@@ -14,9 +14,10 @@ from simplex2 import *
 #     print('=====================')
 
 matrix = np.zeros([4, 4], dtype=float)
-matrix[0] = [0, 3, 4, 0]
+matrix[0] = [1, 3, 4, 0]
 matrix[1] = [1, 1, 5, 13]
 matrix[2] = [3, 4, 2, 9]
 matrix[3] = [2, 6, 7, 18]
 simplex = Simplex(matrix)
 print(simplex.algorithms[0])
+simplex.execute()
