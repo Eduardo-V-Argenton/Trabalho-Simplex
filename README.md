@@ -1,2 +1,2 @@
 # Trabalho-Simplex
-Atividade avaliativa com objetivo de fazer algoritmos  simplex
+Atividade avaliativa com objetivo de resolver algoritmos  simplex
