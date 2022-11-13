@@ -1,6 +1,6 @@
 import numpy as np
 
-from simplex2 import *
+from simplex import *
 
 # fact = Factory()
 # simplex = fact.create_simplex(3, 4, False,2,2)
@@ -19,5 +19,9 @@ matrix[1] = [1, 1, 5, 13]
 matrix[2] = [3, 4, 2, 9]
 matrix[3] = [2, 6, 7, 18]
 simplex = Simplex(matrix)
-print(simplex.algorithms[0])
 simplex.execute()
+for i in simplex.algorithms:
+    print(i)
+    print("==============")
+
+print(simplex.get_vb())

@@ -3,232 +3,145 @@ import numpy as np
 
 class Simplex:
 
-    def __init__(self, num_rest, num_var, fo_min=False):
-        self.num_rest = num_rest
-        self.num_var = num_var
-        self.num_lines = 0
-        self.num_coloumns = 0
-        self.fo_min = fo_min
-        self.algorithms = []
-
-    def insert_num_coloumns(self):
-        self.num_coloumns = self.num_var + self.num_rest + 2
-
-    def insert_num_lines(self):
+    def __init__(self, matrix_problem, fo_min=False):
+        mp_num_line, mp_num_column = matrix_problem.shape
+        self.num_var = mp_num_column - 2
+        self.num_rest = mp_num_line - 1
+        self.fo_min = False
+        self.xf = []
+        self.n_xf = []
+        self.a = []
+        self.a_value = 0
+        self.read_config_column(matrix_problem[:, 0])
         self.num_lines = self.num_rest + 1
+        self.num_columns = self.num_rest + len(self.xf) + len(self.n_xf) + len(self.a)
+        self.algorithms = []
+        self.generate_matrix()
+        self.define_initial_algorithm(matrix_problem[:, 1:])
 
-    def insert(self, line, values):
-        matrix = self.get_algorithm()
-        if line <= self.num_lines:
-            matrix[line][1:self.num_var + 1] = values[:-1]
-            matrix[line][-1] = values[-1]
-        else:
-            raise Exception("Invalid line")
+    # 1 --> < || <=
+    # 2 --> > || >=
+    # 3 --> =
+    def read_config_column(self, line) -> None:
+        self.fo_min = line[0] == 1
+        for i, e in enumerate(line[1:], 1):
+            if e == 0:
+                break
+            elif e == 1:
+                self.xf.append(i)
+            elif e == 2:
+                self.n_xf.append(i)
+                self.a.append(i)
+            elif e == 3:
+                self.a.append(i)
+            else:
+                raise Exception("Invalid element in config line")
 
-    def insert_extras(self):
-        matrix = self.get_algorithm()
-        for i in range(1, self.num_lines):
-            matrix[i][self.num_var + i] = 1
-        if self.fo_min:
-            matrix[0][0] = -1
-
-        else:
-            matrix[0] = np.negative(matrix[0])
-            matrix[0][0] = 1
-
-    def generate_matrix(self):
-        self.algorithms.append(np.zeros([self.num_lines, self.num_coloumns], dtype=float))
-
-    def insert_line(self, line, new_line):
-        matrix = self.get_algorithm()
-        matrix[line] = new_line
+    def generate_matrix(self) -> None:
+        self.algorithms.append(np.zeros([self.num_lines, self.num_columns]))
 
     def get_algorithm(self, index=-1):
         return self.algorithms[index]
 
-    def verify_if_finished(self, matrix):
-        for elements in matrix[0][1:self.num_var + 1]:
-            if elements < 0:
-                return 1
-        else:
-            return 0
+    def get_copy(self):
+        return np.copy(self.get_algorithm())
 
-    def select_pivot_candidates(self):
-        matrix = self.get_algorithm()
-        pivot_candidates = {}
-        for i, element in enumerate(matrix[0][:-1]):
-            if element < 0 and i > 0:
-                pivot_candidates[i] = element
-        return pivot_candidates
-
-    def select_pivot_line(self, pivot_coloumn):
-        matrix = self.get_algorithm()
-        pivot_coloumn_values = {}
-        for i, elements in enumerate(matrix):  # Pivot pode ser na linha w ou z?
-            if i == 0:
-                continue
-            div_value = elements[-1] / elements[pivot_coloumn]
-            if div_value > 0:
-                pivot_coloumn_values[i] = div_value
-        pivot_line = min(pivot_coloumn_values, key=pivot_coloumn_values.get)
-        return pivot_line
-
-    def select_pivot(self):
-        matrix = self.get_algorithm()
-        is_it_finished = self.verify_if_finished(matrix)
-        if is_it_finished == 0:
-            return 0
-        pivot_candidates = self.select_pivot_candidates()
-        if self.fo_min:
-            pivot_coloumn = max(pivot_candidates, key=pivot_candidates.get)
-        else:
-            pivot_coloumn = min(pivot_candidates, key=pivot_candidates.get)
-        pivot_line = self.select_pivot_line(pivot_coloumn)
-        return {'line': pivot_line, 'coloumn': pivot_coloumn, 'element': matrix[pivot_line][pivot_coloumn]}
-
-    def execute_algorithms(self):
-        pivot = 1
-        while pivot != 0:
-            matrix = self.get_algorithm()
-            pivot = self.select_pivot()
-            if pivot == 0:
-                break
-            self.generate_matrix()
-            new_pivot_line = matrix[pivot['line']] / pivot['element']
-            self.insert_line(pivot['line'], new_pivot_line)
-            for i in range(0, self.num_lines):
-                if i == pivot['line']:
-                    continue
-                new_line = ((- matrix[i][pivot['coloumn']]) * new_pivot_line) + matrix[i]
-                self.insert_line(i, new_line)
-
-    def execute(self):
-        self.insert_extras()
-        self.execute_algorithms()
-
-
-class SpecialSimplex(Simplex):
-
-    def __init__(self, num_rest, num_var, num_xf, num_a, fo_min=False):
-        super().__init__(num_rest, num_var, fo_min)
-        self.num_xf = num_xf
-        self.num_a = num_a
-        self.has_a = []
-        self.has_xf = []
-
-    def insert_num_coloumns(self):
-        self.num_coloumns = self.num_var + self.num_xf + self.num_a + 2
-
-    def insert_num_lines(self):
-        self.num_lines = self.num_rest + 2
-
-    # 0 -> Only xf
-    # 1 -> Only -xf
-    # 2 -> only a
-    # 3 -> Both
-    def insert(self, line, values, esp_res=0):
-        matrix = self.get_algorithm()
-        if line <= self.num_lines:
-            matrix[line][1:self.num_var + 1] = values[:-1]
-            matrix[line][-1] = values[-1]
-        else:
-            raise Exception("Invalid line")
-        if esp_res == 0 and line > 0:
-            self.has_xf.append(-line)
-        elif esp_res == 0 and line == 0:
-            pass
-        elif esp_res == 1:
-            self.has_xf.append(line)
-        elif esp_res == 2:
-            self.has_a.append(line)
-        elif esp_res == 3:
-            self.has_a.append(line)
-            self.has_xf.append(line)
-        else:
-            raise Exception("Invalid esp_res")
-
-    def insert_extras(self):
-        matrix = self.get_algorithm()
-        for i, line in enumerate(self.has_xf):
-            if line >= 0:
-                matrix[line][self.num_var + i + 1] = -1
-            else:
-                matrix[-line][self.num_var + i + 1] = 1
-        for i, line in enumerate(self.has_a):
-            matrix[line][self.num_var + self.num_xf + i + 1] = 1
-        if self.fo_min:
-            matrix[0][0] = -1
-
-        else:
+    def define_fo_line(self, line, matrix) -> None:
+        matrix[0][:self.num_var] = line[:-1]
+        if len(self.a) == 0:
             matrix[0] = np.negative(matrix[0])
-            matrix[0][0] = 1
+        matrix[0][-1] = line[-1]
+        for i in range(0, len(self.a)):
+            self.a_value = max(x for x in matrix[0][:self.num_var]) * 10000
+            matrix[0][self.num_var + len(self.xf) + len(self.n_xf) + i] = self.a_value * (1 if self.fo_min else -1)
 
-    def insert_aux_line(self):
+    def define_initial_algorithm(self, matrix_problem) -> None:
         matrix = self.get_algorithm()
-        w = np.zeros(self.num_coloumns)
-        w[0] = -1
-        for i, line in enumerate(self.has_a):
-            neg_line = np.negative(matrix[line])
-            neg_line[self.num_var + self.num_xf + i + 1] = 0
-            w = w + neg_line
-        matrix[-1] = w
+        self.define_fo_line(matrix_problem[0, :], matrix)
 
-    def verify_if_finished(self, matrix):
-        for elements in matrix[-1][1:self.num_var + 1]:
-            if elements != 0:
-                return 1
-        else:
-            return 0
+        for i, line in enumerate(matrix[1:], 1):
+            line[:self.num_var] = matrix_problem[i][:-1]
+            line[-1] = matrix_problem[i][-1]
+            matrix[i] = line
 
-    def select_pivot_candidates(self):
-        matrix = self.get_algorithm()
-        pivot_candidates = {}
-        for i, element in enumerate(matrix[-1][:-1]):
-            if element < 0 and i > 0:
-                pivot_candidates[i] = element
-        return pivot_candidates
+        control_column = [0, 0]
+        for i, line in enumerate(matrix[1:, self.num_var:-1], 1):
+            if i in self.xf:
+                line[control_column[0]] = 1
+                control_column[0] += 1
+            elif i in self.n_xf:
+                line[control_column[0]] = -1
+                control_column[0] += 1
+            if i in self.a:
+                line[len(self.n_xf) + len(self.xf) + control_column[1]] = 1
+                control_column[1] += 1
+            matrix[i, self.num_var:-1] = line
 
-    def select_pivot_line(self, pivot_coloumn):
-        matrix = self.get_algorithm()
-        pivot_coloumn_values = {}
-        for i, elements in enumerate(matrix[:-1]):
-            if i == 0:
+    def execute(self) -> None:
+        if len(self.a) > 0:
+            self.zero_fo_a()
+        self.zero_fo_vars()
+
+    def zero_fo_a(self) -> None:
+        matrix = self.get_copy()
+        m_line = 0
+        for i in self.a:
+            if self.fo_min:
+                m_line += matrix[i] * self.a_value
+
+            else:
+                m_line -= matrix[i] * self.a_value
+        m_line -= matrix[0]
+        matrix[0] = m_line
+        self.algorithms.append(matrix)
+
+    def zero_fo_vars(self) -> None:
+        i = 100000
+        while i > 0:
+            matrix = self.get_algorithm()
+            if self.fo_min:
+                if not np.any(matrix[0][:-1] > 0):
+                    break
+                pivot_var_fo = max(matrix[0][:-1])
+            else:
+                if not np.any(matrix[0][:-1] < 0):
+                    break
+                pivot_var_fo = min(matrix[0][:-1])
+
+            pivot_column_index = np.argmax(matrix[0] == pivot_var_fo)
+            pivot_line_index = self.define_pivot_line(pivot_column_index, matrix)
+            self.generate_new_algorithm(pivot_line_index, pivot_column_index)
+            print(i)
+            i -= 1
+
+    def define_pivot_line(self, pivot_column_index, matrix) -> int:
+        pivot_div_val = 0
+        pivot_line_index = 0
+        for i in range(1, self.num_lines):
+            if matrix[i][pivot_column_index] != 0:
+                res = matrix[i][-1] / matrix[i][pivot_column_index]
+                if (res < pivot_div_val or pivot_div_val == 0) and res > 0:
+                    pivot_div_val = res
+                    pivot_line_index = i
+        return pivot_line_index
+
+    def generate_new_algorithm(self, pivot_line_index, pivot_column_index) -> None:
+        matrix = self.get_copy()
+        pivot = matrix[pivot_line_index][pivot_column_index]
+        matrix[pivot_line_index] /= pivot
+        new_pivot_line = matrix[pivot_line_index]
+        for i, line in enumerate(matrix):
+            if i == pivot_line_index:
                 continue
-            div_value = elements[-1] / elements[pivot_coloumn]
-            if (div_value > 0):
-                pivot_coloumn_values[i] = div_value
-        pivot_line = min(pivot_coloumn_values, key=pivot_coloumn_values.get)
-        return pivot_line
+            line = (-line[pivot_column_index] * new_pivot_line) + line
+            matrix[i] = line
+        self.algorithms.append(matrix)
 
-    def execute_2_part(self):
+    def get_vb(self) -> dict:
+        vb = {}
         matrix = self.get_algorithm()
-        simplex2 = Simplex(self.num_rest, self.num_var, self.fo_min)
-        simplex2.insert_num_coloumns()
-        simplex2.insert_num_lines()
-        simplex2.generate_matrix()
-        for i in range(0, simplex2.num_lines):
-            line = matrix[i][:self.num_var + self.num_xf + 1]
-            line = np.append(line, matrix[i][-1])
-            simplex2.insert_line(i, line)
-        simplex2.execute_algorithms()
-        for algorithm in simplex2.algorithms:
-            self.algorithms.append(algorithm)
-
-    def execute(self):
-        self.insert_extras()
-        self.insert_aux_line()
-        self.execute_algorithms()
-        self.execute_2_part()
-
-
-class Factory:
-
-    def create_simplex(self, num_rest, num_var, fo_min=False, num_xf=0, num_a=0):
-        if num_a == 0:
-            simplex = Simplex(num_rest, num_var, fo_min)
-        else:
-            simplex = SpecialSimplex(num_rest, num_var, num_xf, num_a, fo_min)
-        simplex.insert_num_coloumns()
-        simplex.insert_num_lines()
-        simplex.generate_matrix()
-        return simplex
+        for line in matrix:
+            for i, v in enumerate(line):
+                if v == 1:
+                    vb[i] = line[-1]
+        return vb
