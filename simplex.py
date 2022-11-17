@@ -111,7 +111,6 @@ class Simplex:
             pivot_column_index = np.argmax(matrix[0] == pivot_var_fo)
             pivot_line_index = self.define_pivot_line(pivot_column_index, matrix)
             self.generate_new_algorithm(pivot_line_index, pivot_column_index)
-            print(i)
             i -= 1
 
     def define_pivot_line(self, pivot_column_index, matrix) -> int:
@@ -145,3 +144,6 @@ class Simplex:
                 if v == 1:
                     vb[i] = line[-1]
         return vb
+
+    def get_z(self) -> float:
+        return self.get_algorithm()[0][-1]
