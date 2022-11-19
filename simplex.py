@@ -14,7 +14,7 @@ class Simplex:
         self.a_value = 0
         self.read_config_column(matrix_problem[:, 0])
         self.num_lines = self.num_rest + 1
-        self.num_columns = self.num_rest + len(self.xf) + len(self.n_xf) + len(self.a)
+        self.num_columns = self.num_rest + len(self.xf) + len(self.n_xf) + len(self.a) + 1
         self.algorithms = []
         self.generate_matrix()
         self.define_initial_algorithm(matrix_problem[:, 1:])
@@ -96,7 +96,7 @@ class Simplex:
         self.algorithms.append(matrix)
 
     def zero_fo_vars(self) -> None:
-        i = 100000
+        i = 10000000
         while i > 0:
             matrix = self.get_algorithm()
             if self.fo_min:

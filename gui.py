@@ -214,7 +214,11 @@ class MainWindow(QMainWindow):
                     matrix[line + 1][column + 1] = 0
             combo = self.constraint_table.indexWidget(self.constraint_table.model().index(line, self.num_columns))
             matrix[line + 1][0] = combo.currentIndex() + 1
-            matrix[line + 1][self.num_columns + 1] = self.constraint_table.item(line, self.num_columns + 1).text()
+            item = self.constraint_table.item(line, self.num_columns + 1)
+            if item:
+                matrix[line + 1][self.num_columns + 1] = item.text()
+            else:
+                matrix[line + 1][self.num_columns + 1] = 0
         print(matrix)
         simplex = sp.Simplex(matrix)
         simplex.execute()
