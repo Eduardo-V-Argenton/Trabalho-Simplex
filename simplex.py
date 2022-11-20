@@ -1,4 +1,5 @@
 import numpy as np
+from collections import OrderedDict
 
 
 class Simplex:
@@ -136,14 +137,32 @@ class Simplex:
             matrix[i] = line
         self.algorithms.append(matrix)
 
-    def get_vb(self) -> dict:
+    def get_vb(self, index=-1) -> dict:
         vb = {}
-        matrix = self.get_algorithm()
+        matrix = self.get_algorithm(index)
         for line in matrix:
             for i, v in enumerate(line):
                 if v == 1:
-                    vb[i] = line[-1]
+                    if i < self.num_var:
+                        key = f'x{i}'
+                    elif i < self.num_var + len(self.xf) + len(self.n_xf):
+                        key = f'xf{i - self.num_var}'
+                    else:
+                        key = f'a{i-self.num_var - len(self.xf) - len(self.n_xf)}'
+                    vb[key] = line[-1]
+        vb = OrderedDict(sorted(vb.items()))
         return vb
 
-    def get_z(self) -> float:
-        return self.get_algorithm()[0][-1]
+    def get_header(self) -> list:
+        header = []
+        for i in range(self.num_var):
+            header.append(f'x{i}')
+        for i in range(len(self.xf) + len(self.n_xf)):
+            header.append(f'xf{i}')
+        for i in range(len(self.a)):
+            header.append(f'a{i}')
+        header.append('b')
+        return header
+
+    def get_z(self, index=-1) -> float:
+        return self.get_algorithm(index)[0][-1]

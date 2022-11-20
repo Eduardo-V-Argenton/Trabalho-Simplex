@@ -1,18 +1,44 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QTableWidget, QTableWidgetItem, QMessageBox
+from PyQt5 import QtWidgets, QtGui, QtCore
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QLabel, \
+    QComboBox, QPushButton, QHBoxLayout, QSizePolicy, QLineEdit
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton, QHBoxLayout, QSizePolicy
 import sympy
 import numpy as np
 import simplex as sp
+import sys
 
 M = sympy.Symbol('M', positive=True)
 HEADER_SPACE = 11
+global simplex
 
 
-class MainWindow(QMainWindow):
+class TableModel(QtCore.QAbstractTableModel):
+
+    def __init__(self, data, header):
+        super(TableModel, self).__init__()
+        self._data = data
+        self.header = header
+
+    def data(self, index, role):
+        if role == Qt.DisplayRole:
+            value = self._data[index.row(), index.column()]
+            return str(value)
+
+    def rowCount(self, index):
+        return self._data.shape[0]
+
+    def columnCount(self, index):
+        return self._data.shape[1]
+
+    def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
+        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+            return " " * HEADER_SPACE + " " + str(self.header[section]) + " " * HEADER_SPACE
+        return super().headerData(section, orientation, role)
+
+
+class Initial(QMainWindow):
     def __init__(self):
-        super(MainWindow, self).__init__()
-        self.setWindowTitle("Simplex Solver")
+        super(Initial, self).__init__()
         self.CONSTRAINT_EQUALITY_SIGNS = [u"\u2264", u"\u2265", "="]
         self.new_widgets = []
         self.num_lines = 2
@@ -22,6 +48,7 @@ class MainWindow(QMainWindow):
         self.set_ui_layout()
 
         self.setFixedWidth(self.sizeHint().width() + 100)
+        self.setFixedHeight(self.sizeHint().height() + 100)
         self.setWindowFlags(Qt.WindowCloseButtonHint | Qt.WindowMinimizeButtonHint)
 
     def create_ui(self):
@@ -35,9 +62,11 @@ class MainWindow(QMainWindow):
 
         self.objective_fxn_table.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.objective_fxn_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.objective_fxn_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.objective_fxn_table.resizeColumnsToContents()
         self.objective_fxn_table.setFixedHeight(
-            self.objective_fxn_table.verticalHeader().length() + self.objective_fxn_table.horizontalHeader().height())
+            self.objective_fxn_table.verticalHeader().length() + self.objective_fxn_table.horizontalHeader().height() +
+            self.objective_fxn_table.horizontalScrollBar().height() - 15)
 
         self.constraints_label = QLabel("Restrições", self)
         self.constraints_label.setFixedHeight(self.constraints_label.sizeHint().height())
@@ -143,7 +172,8 @@ class MainWindow(QMainWindow):
         self.objective_fxn_table.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.objective_fxn_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.objective_fxn_table.setFixedHeight(
-            self.objective_fxn_table.verticalHeader().length() + self.objective_fxn_table.horizontalHeader().height())
+            self.objective_fxn_table.verticalHeader().length() + self.objective_fxn_table.horizontalHeader().height() +
+            self.objective_fxn_table.horizontalScrollBar().height())
 
     def add_row_event(self):
         self.num_lines += 1
@@ -155,47 +185,8 @@ class MainWindow(QMainWindow):
                                             self.constraint_table.columnCount() - 2, equality_signs_combo)
         self.constraint_table.resizeRowsToContents()
 
-    def read_table_items(self, table, start_row, end_row, start_col, end_col):
-        read_table = np.zeros((end_row - start_row, end_col - start_col), dtype=sympy.Symbol)
-        for i in range(start_row, end_row):
-            for j in range(start_col, end_col):
-                read_table[i - end_row][j - end_col] = float(table.item(i, j).text())
-
-        return read_table
-
-    def read_equality_signs(self, equality_signs_column, table):
-        equality_signs = []
-        for i in range(table.rowCount()):
-            equality_signs.append(table.cellWidget(i, equality_signs_column).currentText())
-        return equality_signs
-
-    def populatetable(self, table, mylist, start_row, end_row, start_col, end_col):
-        for i in range(start_row, end_row):
-            for j in range(start_col, end_col):
-                table.setItem(i, j, QTableWidgetItem(str(mylist[i - end_row][j - end_col])))
-        table.resizeColumnsToContents()
-
-    def get_obj_fxn(self):
-        obj_fxn_coeff = self.read_table_items(self.objective_fxn_table, 0, self.objective_fxn_table.rowCount(), 0,
-                                              self.objective_fxn_table.columnCount() - 2)
-        obj_fxn = np.insert(obj_fxn_coeff, 0, 0)
-        return obj_fxn
-
-    def create_gui_for_tableau(self, tableau, all_variables, vertical_headers):
-        rows, cols = tableau.shape
-        gui_tableau = self.create_table(rows, cols, equality_signs=None, horizontal_headers=all_variables,
-                                        vertical_headers=vertical_headers)
-        self.populatetable(gui_tableau, tableau, 0, rows, 0, cols)
-        return gui_tableau
-
-    def update_gui_tableau(self, tableau, gui_tableau, current_row, vertical_headers):
-        rows, cols = tableau.shape
-        for i in range(rows):
-            gui_tableau.insertRow(gui_tableau.rowCount())
-        self.populatetable(gui_tableau, tableau, current_row, current_row + rows, 0, cols)
-        gui_tableau.setVerticalHeaderLabels(vertical_headers)
-
     def solve_event(self):
+        global simplex
         matrix = np.zeros([self.num_lines + 1, self.num_columns + 2], dtype=float)
         matrix[0][0] = self.operation_combo.currentIndex()
         for column in range(0, self.num_columns):
@@ -219,15 +210,143 @@ class MainWindow(QMainWindow):
                 matrix[line + 1][self.num_columns + 1] = item.text()
             else:
                 matrix[line + 1][self.num_columns + 1] = 0
-        print(matrix)
         simplex = sp.Simplex(matrix)
         simplex.execute()
+        solution = Solution(0)
+        widget.addWidget(solution)
+        widget.setCurrentWidget(solution)
 
 
-if __name__ == "__main__":
-    import sys
+class Solution(QMainWindow):
+    def __init__(self, algorithm_index):
+        super(Solution, self).__init__()
+        self.algorithm_index = algorithm_index
+        self.new_widgets = []
+        self.num_lines = 2
+        self.num_columns = 2
 
-    app = QApplication(sys.argv)
-    mw = MainWindow()
-    mw.show()
-    sys.exit(app.exec())
+        self.create_ui()
+        self.set_ui_layout()
+
+        self.setFixedWidth(self.sizeHint().width() + 400)
+        self.setFixedHeight(self.sizeHint().height())
+        self.setWindowFlags(Qt.WindowCloseButtonHint | Qt.WindowMinimizeButtonHint)
+
+    def create_ui(self):
+        self.algorithm_label = QLabel("Algoritmo", self)
+        self.algorithm_label.setFixedHeight(self.algorithm_label.sizeHint().height())
+        self.algorithm_table = self.create_table()
+
+        self.algorithm_table.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self.algorithm_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.algorithm_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.algorithm_table.resizeColumnsToContents()
+        self.algorithm_table.setFixedHeight(
+            self.algorithm_table.verticalHeader().length() + self.algorithm_table.horizontalHeader().height() +
+            self.algorithm_table.horizontalScrollBar().height() - 15)
+
+        self.vb_label = QLabel("VBs", self)
+        self.vb_label.setFixedHeight(self.vb_label.sizeHint().height())
+        self.vb_table = self.create_vb_line()
+        self.vb_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.vb_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.vb_table.setFixedHeight(
+            self.vb_table.verticalHeader().length() + self.vb_table.horizontalHeader().height() +
+            self.algorithm_table.horizontalScrollBar().height() - 15)
+
+        self.new_simplex_btn = QPushButton('Novo Simplex', self)
+        self.new_simplex_btn.clicked.connect(self.new_simplex_event)
+        self.previous_algorithm_btn = QPushButton("Anterior", self)
+        self.previous_algorithm_btn.clicked.connect(self.previous_algorithm_event)
+        self.next_algorithm_btn = QPushButton("Próximo", self)
+        self.next_algorithm_btn.clicked.connect(self.next_algorithm_event)
+
+        self.z_label = QLabel("Z")
+        self.z_box = self.create_z()
+        self.z_box.setReadOnly(True)
+
+    def set_ui_layout(self):
+        vbox_layout1 = QHBoxLayout(self)
+        vbox_layout2 = QVBoxLayout(self)
+        vbox_layout1.addWidget(self.new_simplex_btn)
+        vbox_layout1.addWidget(self.previous_algorithm_btn)
+        vbox_layout1.addWidget(self.next_algorithm_btn)
+
+        central_widget = QWidget(self)
+        self.setCentralWidget(central_widget)
+
+        main_v_layout = QVBoxLayout(self)
+        central_widget.setLayout(main_v_layout)
+
+        vbox_layout2.addWidget(self.algorithm_label)
+        vbox_layout2.addWidget(self.algorithm_table)
+        vbox_layout2.addWidget(self.vb_label)
+        vbox_layout2.addWidget(self.vb_table)
+
+        vbox_layout2.addWidget(self.z_label)
+        vbox_layout2.addWidget(self.z_box)
+
+        main_v_layout.addLayout(vbox_layout1)
+        main_v_layout.addLayout(vbox_layout2)
+
+    def create_table(self):
+        global simplex
+        header = simplex.get_header()
+        table = QtWidgets.QTableView(self)
+        model = TableModel(simplex.get_algorithm(self.algorithm_index), header)
+        table.setModel(model)
+        table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        return table
+
+    def create_vb_line(self):
+        global simplex
+        vb = simplex.get_vb(self.algorithm_index)
+        columns = len(vb)
+        vb_line = QTableWidget(self)
+        vb_line.setColumnCount(columns)
+        vb_line.setRowCount(1)
+        vb_line.setHorizontalHeaderLabels([" " * HEADER_SPACE + i + " " * HEADER_SPACE for i in vb])
+        for i, value in enumerate(vb.values()):
+            vb_line.setItem(0, i, QTableWidgetItem(str(value)))
+        vb_line.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        return vb_line
+
+    def new_simplex_event(self):
+        widget.setCurrentWidget(initial)
+
+    def previous_algorithm_event(self):
+        if self.algorithm_index > 0:
+            self.algorithm_index -= 1
+        self.reload()
+
+    def next_algorithm_event(self):
+        global simplex
+        if self.algorithm_index < len(simplex.algorithms) - 1:
+            self.algorithm_index += 1
+        self.reload()
+
+    def reload(self):
+        solution = widget.widget(1)
+        widget.removeWidget(solution)
+        solution = Solution(self.algorithm_index)
+        widget.addWidget(solution)
+        widget.setCurrentWidget(solution)
+
+    def create_z(self):
+        z = QLineEdit(str(simplex.get_z(self.algorithm_index)))
+        return z
+
+
+app = QApplication(sys.argv)
+widget = QtWidgets.QStackedWidget()
+
+initial = Initial()
+widget.addWidget(initial)
+
+widget.setWindowTitle("Calculadora-Simplex")
+widget.setWindowIcon(QtGui.QIcon("icon.jpg"))
+
+widget.setCurrentWidget(initial)
+
+widget.show()
+app.exec_()
