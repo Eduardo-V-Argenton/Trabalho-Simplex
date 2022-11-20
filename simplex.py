@@ -15,7 +15,7 @@ class Simplex:
         self.a_value = 0
         self.read_config_column(matrix_problem[:, 0])
         self.num_lines = self.num_rest + 1
-        self.num_columns = self.num_rest + len(self.xf) + len(self.n_xf) + len(self.a) + 1
+        self.num_columns = self.num_rest + len(self.xf) + len(self.n_xf) + len(self.a)
         self.algorithms = []
         self.generate_matrix()
         self.define_initial_algorithm(matrix_problem[:, 1:])
