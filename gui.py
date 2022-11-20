@@ -344,7 +344,7 @@ initial = Initial()
 widget.addWidget(initial)
 
 widget.setWindowTitle("Calculadora-Simplex")
-widget.setWindowIcon(QtGui.QIcon("icon.jpg"))
+widget.setWindowIcon(QtGui.QIcon("icon.ico"))
 
 widget.setCurrentWidget(initial)
 
