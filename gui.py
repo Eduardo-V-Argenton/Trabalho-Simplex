@@ -66,7 +66,7 @@ class Initial(QMainWindow):
         self.objective_fxn_table.resizeColumnsToContents()
         self.objective_fxn_table.setFixedHeight(
             self.objective_fxn_table.verticalHeader().length() + self.objective_fxn_table.horizontalHeader().height() +
-            self.objective_fxn_table.horizontalScrollBar().height() - 15)
+            self.objective_fxn_table.horizontalScrollBar().height())
 
         self.constraints_label = QLabel("Restrições", self)
         self.constraints_label.setFixedHeight(self.constraints_label.sizeHint().height())
@@ -173,7 +173,7 @@ class Initial(QMainWindow):
         self.objective_fxn_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.objective_fxn_table.setFixedHeight(
             self.objective_fxn_table.verticalHeader().length() + self.objective_fxn_table.horizontalHeader().height() +
-            self.objective_fxn_table.horizontalScrollBar().height())
+            self.objective_fxn_table.horizontalScrollBar().height() + 10)
 
     def add_row_event(self):
         self.num_lines += 1
